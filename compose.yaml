@@ -1,0 +1,30 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    restart: unless-stopped
+    command:
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.storage=/certs/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/certs
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`test.sknikod.com`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=le
+
+volumes:
+  certs:
